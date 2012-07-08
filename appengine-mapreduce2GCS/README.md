@@ -29,8 +29,12 @@ class WordCountPipeline(base_handler.PipelineBase):
         mapper_params={"file_paths": "/gs/sample_test/WordCount",
                        "gs_bucket_name": "temp_test",
                        "gs_acl": "public-read"},
-        shuffler_params={"gs_bucket_name": "temp_test", "mime_type": "text/plain", "gs_acl": "public-read"},
-        reducer_params={"gs_bucket_name": "output_test", "mime_type": "text/plain","gs_acl": "public-read"},
+        shuffler_params={"gs_bucket_name": "temp_test",
+                          "mime_type": "text/plain",
+                           "gs_acl": "public-read"},
+        reducer_params={"gs_bucket_name": "output_test",
+                         "mime_type": "text/plain",
+                          "gs_acl": "public-read"},
         shards=2)
 </code></pre>
 Try it, Enjoy.
