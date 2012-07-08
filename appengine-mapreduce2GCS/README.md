@@ -9,7 +9,7 @@ further you can place the intermediate files, the output file to Google Cloud St
 
 How To Use
 ------
-Check out the source and let run MapReduce Made Easy samples.
+Check out the source and let run [MapReduce Made Easy samples.](http://code.google.com/p/appengine-mapreduce/source/checkout)
 And you want to use appengine-mapreduce4GCS,
 As follows:
 <pre><code>
@@ -41,7 +41,7 @@ Try it, Enjoy.
 
 Get Involved
 ----------
-Think it could be better? It�fs all Apache 2.0 licensed.
+Think it could be better? It's all Apache 2.0 licensed.
 feel free to pull request for me.
 
 Licence
