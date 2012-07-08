@@ -12,7 +12,7 @@ How To Use
 Check out the source and let run MapReduce Made Easy samples.
 And you want to use appengine-mapreduce4GCS,
 As follows:
-
+<pre><code>
 class WordCountPipeline(base_handler.PipelineBase):
   """A Mapreduce Pipeline
   """
@@ -30,12 +30,12 @@ class WordCountPipeline(base_handler.PipelineBase):
         shuffler_params={"gs_bucket_name": "temp_test", "mime_type": "text/plain", "gs_acl": "public-read"},
         reducer_params={"gs_bucket_name": "output_test", "mime_type": "text/plain","gs_acl": "public-read"},
         shards=2)
- 
+</code></pre>
 Try it, Enjoy.
 
 Get Involved
 ----------
-Think it could be better? ItÅfs all Apache 2.0 licensed.
+Think it could be better? ItÔøΩfs all Apache 2.0 licensed.
 feel free to pull request for me.
 
 Licence
