@@ -1,0 +1,9 @@
+.DS_Store
+.classpath
+.djunitplugin
+.project
+.settings
+.svn
+.project
+.pydevproject
+
