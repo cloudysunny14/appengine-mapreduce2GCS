@@ -13,6 +13,8 @@ Check out the source and let run MapReduce Made Easy samples.
 And you want to use appengine-mapreduce4GCS,
 As follows:
 <pre><code>
+from googlestorage import mapreduce_pipeline
+
 class WordCountPipeline(base_handler.PipelineBase):
   """A Mapreduce Pipeline
   """
