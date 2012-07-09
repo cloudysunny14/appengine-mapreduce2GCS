@@ -6,4 +6,6 @@
 .svn
 .project
 .pydevproject
+.pyc
+
 
