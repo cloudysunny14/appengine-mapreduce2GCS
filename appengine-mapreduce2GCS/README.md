@@ -10,7 +10,7 @@ further you can place the intermediate files, the output file to Google Cloud St
 How To Use
 ------
 Check out the source and let run [MapReduce Made Easy samples.](http://code.google.com/p/appengine-mapreduce/source/checkout)
-And you want to use appengine-mapreduce4GCS,
+And you want to use appengine-mapreduce2GCS,
 As follows:
 <pre><code>
 from googlestorage import mapreduce_pipeline
