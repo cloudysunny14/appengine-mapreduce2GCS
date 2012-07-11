@@ -9,7 +9,7 @@ further you can place the intermediate files, the output file to Google Cloud St
 
 How To Use
 ------
-Check out the source and let run [MapReduce Made Easy samples.](http://code.google.com/p/appengine-mapreduce/source/checkout)
+Check out the source and let run [MapReduce Made Easy samples.](http://code.google.com/p/appengine-mapreduce/source/browse/#svn%2Ftrunk%2Fpython%2Fdemo)
 And you want to use appengine-mapreduce2GCS,
 As follows:
 <pre><code>
