@@ -3,7 +3,7 @@ appengine-mapreduce2GCS
 
 This is a fork of the Python version of the appengine-mapreduce library under development by AppEngine users.
 http://code.google.com/p/appengine-mapreduce/
-appengine-mapreduce4GCS is a Compornent of appengine-mapreduce.
+appengine-mapreduce2GCS is a Compornent of appengine-mapreduce.
 That is can use the input file was placed in the Google Cloud Storage, 
 further you can place the intermediate files, the output file to Google Cloud Storage
 
