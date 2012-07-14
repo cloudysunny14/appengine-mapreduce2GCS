@@ -36,8 +36,6 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
   The class shouldn't be instantiated directly. Use the split_input class method
   instead.
   """
-  # TODO(user): Should we set this based on MAX_BLOB_FETCH_SIZE?
-  _BLOB_BUFFER_SIZE = 64000
   
   # Maximum number of shards to allow.
   _MAX_SHARD_COUNT = 256
@@ -65,15 +63,13 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
       file_path: the file_path that this input reader is processing.
       start_position: the position to start reading at.
       end_position: a position in the last record to read.
+      read_buffer_size: the buffer size of file stream for read.
     """
     self._file_path = file_path
     self._start_position = start_position
     self._end_position = end_position
     self._has_iterated = False
-    with files.file.open(self._file_path, 'r') as fp:
-      fp.seek(self._start_position, 0)
-      value = fp.read(self._BLOB_BUFFER_SIZE)
-    self._filestream = StringIO(value)
+    self._filestream = None
     self._read_before_start = bool(start_position)
   
   @classmethod
@@ -128,29 +124,35 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
     
     shard_count = min(cls._MAX_SHARD_COUNT, mapper_spec.shard_count)
     
-    shards_per_blob = shard_count // len(file_paths)
-    if shards_per_blob == 0:
-      shards_per_blob = 1
+    shards_per_file = shard_count // len(file_paths)
+    if shards_per_file == 0:
+      shards_per_file = 1
 
     chunks = []
-    for blob_key, blob_size in file_sizes.items():
-      blob_chunk_size = blob_size // shards_per_blob
-      for i in xrange(shards_per_blob - 1):
+    for file_path, file_size in file_sizes.items():
+      file_chunk_size = file_size // shards_per_file
+      for i in xrange(shards_per_file - 1):
         chunks.append(GoogleStorageLineInputReader.from_json(
-            {cls.FILE_PATH_PARAM: blob_key,
-             cls.INITIAL_POSITION_PARAM: blob_chunk_size * i,
-             cls.END_POSITION_PARAM: blob_chunk_size * (i + 1)}))
+            {cls.FILE_PATH_PARAM: file_path,
+             cls.INITIAL_POSITION_PARAM: file_chunk_size * i,
+             cls.END_POSITION_PARAM: file_chunk_size * (i + 1)}))
       chunks.append(GoogleStorageLineInputReader.from_json(
-          {cls.FILE_PATH_PARAM: blob_key,
-           cls.INITIAL_POSITION_PARAM: blob_chunk_size * (shards_per_blob - 1),
-           cls.END_POSITION_PARAM: blob_size}))
+          {cls.FILE_PATH_PARAM: file_path,
+           cls.INITIAL_POSITION_PARAM: file_chunk_size * (shards_per_file - 1),
+           cls.END_POSITION_PARAM: file_size}))
       
     return chunks
   
   def next(self):
     """Returns the next input from as an (offset, line) tuple."""
     self._has_iterated = True
-
+    
+    if not self._filestream:
+      with files.open(self._file_path, 'r') as fp:
+        value = fp.read()
+      self._filestream = StringIO(value)
+      self._filestream.seek(self._start_position)
+    
     if self._read_before_start:
       self._filestream.readline()
       self._read_before_start = False
@@ -164,11 +166,12 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
 
     if not line:
       self.stopIteration()
-
+      
     return start_position, line.rstrip("\n")
     
   def stopIteration(self):
     self._filestream.close()
+    self._filestream = None
     raise StopIteration()
   
   def to_json(self):
@@ -180,7 +183,7 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
   def __str__(self):
     """Returns the string representation of this GoogleStorageLineInputReader."""
     return "FilePath(%r):[%d, %d]" % (
-        self._file_path, self._filestream.tell(), self._end_position)
+        self._file_path, self._start_position, self._end_position)
 
   @classmethod
   def from_json(cls, json):
