@@ -70,6 +70,10 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
     self._end_position = end_position
     self._has_iterated = False
     self._filestream = None
+    with files.open(self._file_path, 'r') as fp:
+      value = fp.read()
+    self._filestream = StringIO(value)
+    self._filestream.seek(self._start_position)
     self._read_before_start = bool(start_position)
   
   @classmethod
@@ -146,13 +150,7 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
   def next(self):
     """Returns the next input from as an (offset, line) tuple."""
     self._has_iterated = True
-    
-    if not self._filestream:
-      with files.open(self._file_path, 'r') as fp:
-        value = fp.read()
-      self._filestream = StringIO(value)
-      self._filestream.seek(self._start_position)
-    
+
     if self._read_before_start:
       self._filestream.readline()
       self._read_before_start = False
@@ -161,9 +159,9 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
 
     if start_position > self._end_position:
       self.stopIteration()
-
+      
     line = self._filestream.readline()
-
+    
     if not line:
       self.stopIteration()
       
@@ -171,19 +169,21 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
     
   def stopIteration(self):
     self._filestream.close()
-    self._filestream = None
     raise StopIteration()
   
   def to_json(self):
     """Returns an json-compatible input shard spec for remaining inputs."""
+    new_pos = self._filestream.tell()
+    if self._has_iterated:
+      new_pos -= 1
     return {self.FILE_PATH_PARAM: self._file_path,
-            self.INITIAL_POSITION_PARAM: self._start_position,
+            self.INITIAL_POSITION_PARAM: new_pos,
             self.END_POSITION_PARAM: self._end_position}
   
   def __str__(self):
     """Returns the string representation of this GoogleStorageLineInputReader."""
     return "FilePath(%r):[%d, %d]" % (
-        self._file_path, self._start_position, self._end_position)
+        self._file_path, self._filestream.tell(), self._end_position)
 
   @classmethod
   def from_json(cls, json):
