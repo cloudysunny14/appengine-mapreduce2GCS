@@ -63,7 +63,6 @@ class GoogleStorageLineInputReader(input_readers.InputReader):
       file_path: the file_path that this input reader is processing.
       start_position: the position to start reading at.
       end_position: a position in the last record to read.
-      read_buffer_size: the buffer size of file stream for read.
     """
     self._file_path = file_path
     self._start_position = start_position
