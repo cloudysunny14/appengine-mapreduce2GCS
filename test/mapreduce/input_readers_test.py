@@ -74,6 +74,7 @@ class TestEntity(db.Model):
   json_property = model.JsonProperty(TestJsonType)
   json_property_default_value = model.JsonProperty(
       TestJsonType, default=TestJsonType())
+  int_property = db.IntegerProperty()
 
 class TestEntityWithDot(db.Model):
   """Test entity class with dot in its kind."""
@@ -83,7 +84,7 @@ class TestEntityWithDot(db.Model):
     return "Test.Entity.With.Dot"
 
 
-ENTITY_KIND = "input_readers_test.TestEntity"
+ENTITY_KIND = "__main__.TestEntity"
 
 
 def key(entity_id, namespace=None, kind="TestEntity"):
@@ -302,6 +303,33 @@ class DatastoreInputReaderTest(unittest.TestCase):
         "FooHandler",
         "mapreduce.input_readers.DatastoreInputReader",
         params, 1)
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.DatastoreInputReader.validate,
+                      mapper_spec)
+
+  def testValidate_Filters(self):
+    """Tests validating filters parameter."""
+    params = {
+        "entity_kind": ENTITY_KIND,
+        "filters": [("a", "=", 1), ("b", "=", 2)],
+        }
+    mapper_spec = model.MapperSpec(
+        "FooHandler",
+        "mapreduce.input_readers.DatastoreInputReader",
+        params, 1)
+    input_readers.DatastoreInputReader.validate(mapper_spec)
+
+    params["filters"] = {"a": "1"}
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.DatastoreInputReader.validate,
+                      mapper_spec)
+
+    params["filters"] = [("a", "<=", 1)]
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.DatastoreInputReader.validate,
+                      mapper_spec)
+
+    params["filters"] = [(1, "=", 1)]
     self.assertRaises(input_readers.BadReaderParamsError,
                       input_readers.DatastoreInputReader.validate,
                       mapper_spec)
@@ -723,6 +751,32 @@ class DatastoreInputReaderTest(unittest.TestCase):
          "datastore_types.Key.from_path(u'TestEntity', 6L, _app=u'testapp')"
          " to None)"],
         stringified)
+
+  def testFilterIter(self):
+    """Tests iterating over input with filter set."""
+    for i in range(0, 100):
+      TestEntity(int_property=(i % 5)).put()
+
+    reader = input_readers.DatastoreInputReader(
+        ENTITY_KIND,
+        key_ranges=[
+          key_range.KeyRange(
+            key_start=None,
+            key_end=None,
+            direction="ASC",
+            include_start=False,
+            include_end=False,
+            namespace="")],
+          ns_range=None,
+          batch_size=50,
+        filters=[("int_property", "=", 0)])
+
+    entities = []
+    for entity in reader:
+      self.assertEquals(0, entity.int_property)
+      entities.append(entity)
+    self.assertEquals(20, len(entities))
+
 
 class DatastoreKeyInputReaderTest(unittest.TestCase):
   """Tests for DatastoreKeyInputReader."""
@@ -1438,10 +1492,102 @@ class MockUnappliedQuery(datastore.Query):
     return self.results
 
 
+class RandomStringInputReaderTest(unittest.TestCase):
+  """Tests for RandomStringInputReader."""
+
+  def testIter(self):
+    input_reader = input_readers.RandomStringInputReader(10, 9)
+    i = 0
+    for content in input_reader:
+      i += 1
+      self.assertEquals(9, len(content))
+    self.assertEquals(10, i)
+
+  def testEndToEnd(self):
+    mapper_spec = model.MapperSpec(
+        "test_handler",
+        input_readers.__name__ + ".RandomStringInputReader",
+        {
+            "input_reader": {
+                "count": 1000
+            },
+        },
+        99)
+    readers = input_readers.RandomStringInputReader.split_input(mapper_spec)
+    i = 0
+    for reader in readers:
+      for _ in reader:
+        i += 1
+    self.assertEquals(1000, i)
+
+  def testValidate(self):
+    mapper_spec = model.MapperSpec(
+        "test_handler",
+        input_readers.__name__ + ".RandomStringInputReader",
+        {
+            "input_reader": {
+                "count": "1000"
+            },
+        },
+        99)
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.RandomStringInputReader.validate,
+                      mapper_spec)
+
+    mapper_spec = model.MapperSpec(
+        "test_handler",
+        input_readers.__name__ + ".RandomStringInputReader",
+        {
+            "input_reader": {
+                "count": -1
+            },
+        },
+        99)
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.RandomStringInputReader.validate,
+                      mapper_spec)
+
+    mapper_spec = model.MapperSpec(
+        "test_handler",
+        input_readers.__name__ + ".RandomStringInputReader",
+        {
+            "input_reader": {
+                "count": 100
+            },
+        },
+        -1)
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.RandomStringInputReader.validate,
+                      mapper_spec)
+
+    mapper_spec = model.MapperSpec(
+        "test_handler",
+        input_readers.__name__ + ".RandomStringInputReader",
+        {
+            "input_reader": {
+                "count": 100,
+                "string_length": 1.5
+            },
+        },
+        99)
+    self.assertRaises(input_readers.BadReaderParamsError,
+                      input_readers.RandomStringInputReader.validate,
+                      mapper_spec)
+
+  def testToFromJson(self):
+    input_reader = input_readers.RandomStringInputReader(10, 9)
+    reader_in_json = input_reader.to_json()
+    self.assertEquals({"count": 10, "string_length": 9}, reader_in_json)
+    input_readers.RandomStringInputReader.from_json(reader_in_json)
+    self.assertEquals(10, input_reader._count)
+
+
 class ConsistentKeyReaderTest(unittest.TestCase):
   """Tests for the ConsistentKeyReader."""
 
-  MAPREDUCE_READER_SPEC = ("mapreduce.input_readers.ConsistentKeyReader")
+  MAPREDUCE_READER_SPEC = ("%s.%s" %
+                           (input_readers.ConsistentKeyReader.__module__,
+                            input_readers.ConsistentKeyReader.__name__))
 
   def setUp(self):
     """Sets up the test harness."""
@@ -1669,7 +1815,9 @@ class ConsistentKeyReaderTest(unittest.TestCase):
 class NamespaceInputReaderTest(unittest.TestCase):
   """Tests for NamespaceInputReader."""
 
-  MAPREDUCE_READER_SPEC = ("mapreduce.input_readers.NamespaceInputReader")
+  MAPREDUCE_READER_SPEC = ("%s.%s" %
+                           (input_readers.NamespaceInputReader.__module__,
+                            input_readers.NamespaceInputReader.__name__))
 
   def setUp(self):
     unittest.TestCase.setUp(self)
@@ -1891,10 +2039,9 @@ class RecordsReaderTest(testutil.HandlerTestBase):
   def testIter(self):
     """Test __iter__ implementation."""
     # Prepare the file.
-    input_file = files.blobstore.create('/gs/foo/bar', mime_type='text/plain', 
-                                                            acl='public-read')
+    input_file = files.blobstore.create()
     input_data = [str(i) for i in range(100)]
-    
+
     with files.open(input_file, "a") as f:
       with records.RecordsWriter(f) as w:
         for record in input_data:
@@ -1948,7 +2095,8 @@ class RecordsReaderTest(testutil.HandlerTestBase):
     reader = input_readers.RecordsReader.from_json(
         {"filenames": [], "position": 0})
     self.assertEquals("[]:0", str(reader))
-    
+
+
 class LogInputReaderTest(unittest.TestCase):
   """Tests for LogInputReaderTest."""
 

@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-#
-# Copyright 2010 Google Inc.
+# Copyright 2012 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-'''
-Created on 2012/06/26
 
-@author: cloudysunny14
-'''
-import unittest
+# Add these indexes to your app to get a functional root status UI.
+indexes:
 
-class CloudStorageInputReaderTest(unittest.TestCase):
-  """Test Datastore{,Key,Entity}InputReader classes."""
-  
+- kind: _AE_Pipeline_Record
+  properties:
+  - name: is_root_pipeline
+  - name: start_time
+    direction: desc
+
+- kind: _AE_Pipeline_Record
+  properties:
+  - name: class_path
+  - name: start_time
+    direction: desc

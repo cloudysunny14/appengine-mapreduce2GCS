@@ -27,7 +27,7 @@ from googlestorage import input_readers
 
 class GoogleStorageInputReaderTest(testutil.HandlerTestBase):
   READER_NAME = (
-      "mapreduce.input_readers.CloudStorageLineInputReader")
+      "googlestorage.input_readers.GoogleStorageLineInputReader")
   
   def assertDone(self, reader):
     self.assertRaises(StopIteration, reader.next)
